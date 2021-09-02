@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS content.person (
 );
 
 -- Фильмы
-CREATE TYPE content.film_work_type AS ENUM ('movie');
+CREATE TYPE content.film_work_type AS ENUM ('movie', 'tv_show');
 CREATE TABLE IF NOT EXISTS content.film_work (
   id uuid PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
