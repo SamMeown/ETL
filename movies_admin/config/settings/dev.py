@@ -17,3 +17,19 @@ DATABASES = {
         }
     }
 }
+
+# Настройки для debug_toolbar
+#
+# INSTALLED_APPS += [
+#     'debug_toolbar',
+# ]
+#
+# MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
+#
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+#
+# INTERNAL_IPS = [
+#     # ...
+#     '127.0.0.1',
+#     # ...
+# ]
