@@ -10,7 +10,6 @@ class GenreInline(admin.TabularInline):
 class PersonInline(admin.TabularInline):
     model = FilmworkPerson
     extra = 0
-    # fields = ('role',)
     ordering = ('-role', 'person__full_name')
 
 
@@ -21,24 +20,21 @@ class FilmWorkAdmin(admin.ModelAdmin):
         'title', 'type', 'description', 'creation_date', 'certificate',
         'file_path', 'rating',
     )
-
-    list_filter = ('type',)
-
-    search_fields = ('title', 'description', 'id',)
-
-    inlines = [
+    inlines = (
         GenreInline,
         PersonInline,
-    ]
+    )
+
+    list_filter = ('type',)
+    search_fields = ('title', 'description', 'id',)
 
 
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):
     list_display = ('name',)
     fields = ('name', 'description')
-
     search_fields = ('name',)
-
+    
     ordering = ('name',)
 
 
@@ -46,7 +42,6 @@ class GenreAdmin(admin.ModelAdmin):
 class PersonAdmin(admin.ModelAdmin):
     list_display = ('full_name', 'birth_date')
     fields = ('full_name', 'birth_date')
-
     search_fields = ('full_name',)
 
     ordering = ('full_name',)
