@@ -3,28 +3,29 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 
 import uuid
+import functools
 
 
 # Добавлям классы для текстового и файлового полей, которые пустые значения сохраняют в базу данных как NULL.
 # Делаем так потому, что в базе, которую мы унаследовали, используется такое соглашение (не пустые строки, а NULL).
+def return_none_if_empty(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        value = func(*args, **kwargs)
+        if not value:
+            return None
+        return value
+    return wrapper
+
+
 class TextNullField(models.TextField):
     """TextField that stores NULL when empty"""
-    def get_db_prep_value(self, value, connection, prepared=False):
-        value = super().get_db_prep_value(value, connection, prepared)
-        if value == "":
-            return None
-        else:
-            return value
+    get_db_prep_value = return_none_if_empty(models.TextField.get_db_prep_value)
 
 
 class FileNullField(models.FileField):
     """FileField that stores NULL when empty"""
-    def get_db_prep_value(self, value, connection, prepared=False):
-        value = super().get_db_prep_value(value, connection, prepared)
-        if value == "":
-            return None
-        else:
-            return value
+    get_db_prep_value = return_none_if_empty(models.FileField.get_db_prep_value)
 
 
 class TimeStampedMixin(models.Model):
@@ -41,13 +42,13 @@ class Genre(TimeStampedMixin, models.Model):
     name = models.CharField(_('title'), max_length=80)
     description = models.CharField(_('description'), max_length=255, blank=True, null=True)
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         verbose_name = _('genre')
         verbose_name_plural = _('genres')
         db_table = '"content"."genre"'
+
+    def __str__(self):
+        return self.name
 
 
 class Person(TimeStampedMixin, models.Model):
@@ -56,13 +57,13 @@ class Person(TimeStampedMixin, models.Model):
     full_name = models.CharField(_('full name'), max_length=255)
     birth_date = models.DateField(_('birth date'), blank=True, null=True)
 
-    def __str__(self):
-        return self.full_name
-
     class Meta:
         verbose_name = _('person')
         verbose_name_plural = _('persons')
         db_table = '"content"."person"'
+
+    def __str__(self):
+        return self.full_name
 
 
 class PersonType(models.TextChoices):
@@ -92,7 +93,6 @@ class FilmworkGenre(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # auto_created = True
         db_table = '"content"."genre_film_work"'
         unique_together = [['film_work', 'genre']]
 
@@ -116,10 +116,10 @@ class Filmwork(TimeStampedMixin, models.Model):
     genres = models.ManyToManyField(Genre, through='FilmworkGenre')
     persons = models.ManyToManyField(Person, through='FilmworkPerson')
 
-    def __str__(self):
-        return self.title
-
     class Meta:
         verbose_name = _('filmwork')
         verbose_name_plural = _('filmworks')
         db_table = '"content"."film_work"'
+
+    def __str__(self):
+        return self.title
