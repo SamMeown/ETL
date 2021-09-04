@@ -1,0 +1,4 @@
+-r base.txt
+
+# dev зависимости
+django-debug-toolbar==2.2
