@@ -3,11 +3,12 @@ from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime, date
 import uuid
+from enum import Enum, auto
+from typing import List
+
 import psycopg2
 from psycopg2.extensions import connection as _connection
 from psycopg2.extras import execute_batch, register_uuid, DictCursor
-from enum import Enum, auto
-from typing import List
 
 
 @dataclass(frozen=True)
