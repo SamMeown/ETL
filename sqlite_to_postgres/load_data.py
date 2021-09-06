@@ -1,10 +1,11 @@
 import sqlite3
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple, fields
+from typing import Iterable
 from datetime import datetime, date
 import uuid
 from enum import Enum, auto
-from typing import List
+from os import environ
 
 import psycopg2
 from psycopg2.extensions import connection as _connection
@@ -31,6 +32,7 @@ class Person:
 
 class FilmWorkType(Enum):
     movie = auto()
+    tv_show = auto()
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,21 @@ class GenreFilmWork:
     created_at: datetime
 
 
+@dataclass(frozen=True)
+class TableInfo:
+    table_name: str
+    data_type: type
+
+
+tables = (
+    TableInfo(table_name='genre', data_type=Genre),
+    TableInfo(table_name='person', data_type=Person),
+    TableInfo(table_name='film_work', data_type=FilmWork),
+    TableInfo(table_name='person_film_work', data_type=PersonFilmWork),
+    TableInfo(table_name='genre_film_work', data_type=GenreFilmWork),
+)
+
+
 class PostgresSaver:
     """Класс для записи данных в postgres"""
     def __init__(self, pg_conn):
@@ -82,73 +99,31 @@ class PostgresSaver:
             cursor.execute("""TRUNCATE content.genre, content.person, content.film_work CASCADE""")
             cursor.execute("""TRUNCATE content.person_film_work, content.genre_film_work""")
 
-    def save_genres(self, genres: List[Genre]):
-        """Запись жанров в таблицу content.genre"""
-        with self.pg_conn.cursor() as cursor:
-            execute_batch(
-                cursor,
-                "INSERT INTO content.genre (id, name, description, created_at, updated_at) VALUES (%s, %s, %s, %s, %s)",
-                ((genre.id, genre.name, genre.description, genre.created_at, genre.updated_at) for genre in genres),
-                page_size=100
-            )
+    @staticmethod
+    def raw_data_from_item(item):
+        return map(lambda value: value.name if issubclass(type(value), Enum) else value,
+                   astuple(item))
 
-    def save_persons(self, persons: List[Person]):
-        """Запись персон в таблицу content.person"""
-        with self.pg_conn.cursor() as cursor:
-            execute_batch(
-                cursor,
-                """
-                INSERT INTO content.person (id, full_name, birth_date, created_at, updated_at) 
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                ((person.id, person.full_name, person.birth_date, person.created_at, person.updated_at)
-                 for person in persons),
-                page_size=1000
-            )
+    def save_items(self, db, items, page_size=1000):
+        """Запись айтемов items в таблицу content.db"""
+        if not items:
+            return
 
-    def save_film_works(self, film_works: List[FilmWork]):
-        """Запись фильмов в таблицу content.film_work"""
         with self.pg_conn.cursor() as cursor:
+            item_type = type(items[0])
+            fields_list = ", ".join([fld.name for fld in fields(item_type)])
+            placeholder_list = ", ".join(["%s"] * len(fields(item_type)))
+            sql_request = f"""
+                            INSERT INTO content.{db} 
+                            ({fields_list})
+                            VALUES 
+                            ({placeholder_list})
+                        """
             execute_batch(
                 cursor,
-                """
-                INSERT INTO content.film_work 
-                (id, title, description, creation_date, certificate, file_path, rating, type, created_at, updated_at)
-                VALUES 
-                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """,
-                ((film_work.id, film_work.title, film_work.description, film_work.creation_date, film_work.certificate,
-                  film_work.file_path, film_work.rating, film_work.type.name, film_work.created_at,
-                  film_work.updated_at) for film_work in film_works),
-                page_size=500
-            )
-
-    def save_genre_film_works(self, genre_film_works: List[GenreFilmWork]):
-        """Запись жанров фильмов в таблицу content.genre_film_work"""
-        with self.pg_conn.cursor() as cursor:
-            execute_batch(
-                cursor,
-                """
-                INSERT INTO content.genre_film_work (id, film_work_id, genre_id, created_at)
-                VALUES (%s, %s, %s, %s)
-                """,
-                ((genre_film_work.id, genre_film_work.film_work_id, genre_film_work.genre_id,
-                  genre_film_work.created_at) for genre_film_work in genre_film_works),
-                page_size=1000
-            )
-
-    def save_person_film_works(self, person_film_works: List[PersonFilmWork]):
-        """Запись ролей персон в фильмах в таблицу content.person_film_work"""
-        with self.pg_conn.cursor() as cursor:
-            execute_batch(
-                cursor,
-                """
-                INSERT INTO content.person_film_work (id, film_work_id, person_id, role, created_at)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                ((person_film_work.id, person_film_work.film_work_id, person_film_work.person_id,
-                  person_film_work.role.name, person_film_work.created_at) for person_film_work in person_film_works),
-                page_size=1000
+                sql_request,
+                (list(self.raw_data_from_item(item)) for item in items),
+                page_size=page_size
             )
 
 
@@ -158,96 +133,41 @@ class SQLiteLoader:
         self.conn = conn
         sqlite3.register_converter("timestamp", SQLiteLoader.convert_timestamp)
 
-    def load_genres(self) -> List[Genre]:
-        """Загрузка жанров из таблицы genre"""
+    @staticmethod
+    def item_from_raw_data(raw_data, item_type):
+        item_field_values = []
+        for value, value_field in zip(raw_data, fields(item_type)):
+            adapted_value = value
+            value_type = value_field.type
+            if issubclass(value_type, uuid.UUID):
+                adapted_value = value_type(value)
+            elif issubclass(value_type, Enum):
+                adapted_value = value_type[value]
+            item_field_values.append(adapted_value)
+
+        return item_type(*item_field_values)
+
+    def load_items(self, db, item_type):
+        """Загрузка данных типа item_type из таблицы db"""
         cursor = self.conn.cursor()
-        cursor.execute("""
-                SELECT id, name, description, created_at, updated_at
-                FROM genre
-            """)
-        data = [Genre(id=uuid.UUID(row[0]),
-                      name=row[1],
-                      description=row[2],
-                      created_at=row[3],
-                      updated_at=row[4]) for row in cursor.fetchall()]
-        cursor.close()
 
-        return data
-
-    def load_persons(self) -> List[Person]:
-        """Загрузка персон из таблицы person"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, full_name, birth_date, created_at, updated_at
-            FROM person
-        """)
-        data = [Person(id=uuid.UUID(row[0]),
-                       full_name=row[1],
-                       birth_date=row[2],
-                       created_at=row[3],
-                       updated_at=row[4]) for row in cursor.fetchall()]
-        cursor.close()
-
-        return data
-
-    def load_film_works(self) -> List[FilmWork]:
-        """Загрузка фильмов из таблицы film_work"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, title, description, creation_date, certificate, file_path, rating, type, created_at, updated_at
-            FROM film_work
-        """)
-        data = [FilmWork(id=uuid.UUID(row[0]),
-                         title=row[1],
-                         description=row[2],
-                         creation_date=row[3],
-                         certificate=row[4],
-                         file_path=row[5],
-                         rating=row[6],
-                         type=FilmWorkType[row[7]],
-                         created_at=row[8],
-                         updated_at=row[9]) for row in cursor.fetchall()]
-        cursor.close()
-
-        return data
-
-    def load_person_film_works(self) -> List[PersonFilmWork]:
-        """Загрузка ролей персон в фильмах из таблицы person_film_work"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, film_work_id, person_id, role, created_at
-            FROM person_film_work
-        """)
-        data = [PersonFilmWork(id=uuid.UUID(row[0]),
-                               film_work_id=uuid.UUID(row[1]),
-                               person_id=uuid.UUID(row[2]),
-                               role=PersonFilmWorkRole[row[3]],
-                               created_at=row[4]) for row in cursor.fetchall()]
-        cursor.close()
-
-        return data
-
-    def load_genre_film_works(self) -> List[GenreFilmWork]:
-        """Загрузка жанров фильмов из таблицы genre_film_work"""
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT id, film_work_id, genre_id, created_at
-            FROM genre_film_work
-        """)
-        data = [GenreFilmWork(id=uuid.UUID(row[0]),
-                              film_work_id=uuid.UUID(row[1]),
-                              genre_id=uuid.UUID(row[2]),
-                              created_at=row[3]) for row in cursor.fetchall()]
+        fields_list = ", ".join([fld.name for fld in fields(item_type)])
+        sql_request = f"""
+                SELECT {fields_list}
+                FROM {db}
+            """
+        cursor.execute(sql_request)
+        data = [self.item_from_raw_data(raw_data, item_type) for raw_data in cursor.fetchall()]
         cursor.close()
 
         return data
 
     @staticmethod
-    def convert_timestamp(val):
+    def convert_timestamp(db_timestamp):
         """Слегка модифицированный конвертер для чтения timestamp в datetime,
         который не падает при размере поля с микросекундами менее шести символов.
         """
-        datepart, timepart = val.split(b" ")
+        datepart, timepart = db_timestamp.split(b" ")
         year, month, day = map(int, datepart.split(b"-"))
         timepart_full = timepart.split(b".")
         hours, minutes, seconds = map(int, timepart_full[0].split(b":"))
@@ -258,11 +178,11 @@ class SQLiteLoader:
         else:
             microseconds = 0
 
-        val = datetime(year, month, day, hours, minutes, seconds, microseconds)
-        return val
+        converted_timestamp = datetime(year, month, day, hours, minutes, seconds, microseconds)
+        return converted_timestamp
 
 
-def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection):
+def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection, table_infos: Iterable[TableInfo]):
     """Основной метод загрузки данных из SQLite в Postgres"""
     postgres_saver = PostgresSaver(pg_conn)
     sqlite_loader = SQLiteLoader(connection)
@@ -271,33 +191,24 @@ def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection):
     postgres_saver.truncate_all()
 
     # По очереди считываем данные из каждой таблицы sqlite и записываем в postgres
-    data = sqlite_loader.load_genres()
-    postgres_saver.save_genres(data)
-
-    data = sqlite_loader.load_persons()
-    postgres_saver.save_persons(data)
-
-    data = sqlite_loader.load_film_works()
-    postgres_saver.save_film_works(data)
-
-    data = sqlite_loader.load_person_film_works()
-    postgres_saver.save_person_film_works(data)
-
-    data = sqlite_loader.load_genre_film_works()
-    postgres_saver.save_genre_film_works(data)
+    for table_info in table_infos:
+        data = sqlite_loader.load_items(table_info.table_name, table_info.data_type)
+        postgres_saver.save_items(table_info.table_name, data)
 
 
 if __name__ == '__main__':
     dsn = {
-        'dbname': 'movies',
-        'user': 'postgres',
-        'password': 'SomeBigSecret',
-        'host': '127.0.0.1',
-        'port': 5432
+        'dbname': environ.get('MIGRATION_DST_DB_NAME'),
+        'user': environ.get('MIGRATION_DST_DB_USER'),
+        'password': environ.get('MIGRATION_DST_DB_PASSWORD'),
+        'host': environ.get('MIGRATION_DST_DB_HOST', '127.0.0.1'),
+        'port': int(environ.get('MIGRATION_DST_DB_PORT', '5432'))
     }
 
-    db_name = 'db.sqlite'
+    db_path = environ.get('MIGRATION_SRC_DB_PATH', 'db.sqlite')
 
-    with closing(sqlite3.connect(db_name, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)) as sqlite_conn,\
-            psycopg2.connect(**dsn, cursor_factory=DictCursor) as pg_conn:
-        load_from_sqlite(sqlite_conn, pg_conn)
+    with closing(sqlite3.connect(db_path,
+                                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)) as sqlite_connection,\
+            psycopg2.connect(**dsn,
+                             cursor_factory=DictCursor) as pg_connection:
+        load_from_sqlite(sqlite_connection, pg_connection, tables)
