@@ -58,6 +58,9 @@ class Person(TimeStampedMixin, models.Model):
     birth_date = models.DateField(_('birth date'), blank=True, null=True)
 
     class Meta:
+        indexes = (
+            models.Index(fields=('full_name',), name='person_full_name_idx'),
+        )
         verbose_name = _('person')
         verbose_name_plural = _('persons')
         db_table = '"content"."person"'
@@ -81,8 +84,13 @@ class FilmworkPerson(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        constraints = (
+            models.UniqueConstraint(fields=('film_work', 'person', 'role'), name='person_film_work_idx'),
+        )
+        indexes = (
+            models.Index(fields=('person_id',), name='person_film_work_person_idx'),
+        )
         db_table = '"content"."person_film_work"'
-        unique_together = [['film_work', 'person', 'role']]
 
 
 class FilmworkGenre(models.Model):
@@ -93,8 +101,10 @@ class FilmworkGenre(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        constraints = (
+            models.UniqueConstraint(fields=('film_work', 'genre'), name='genre_film_work_idx'),
+        )
         db_table = '"content"."genre_film_work"'
-        unique_together = [['film_work', 'genre']]
 
 
 class FilmworkType(models.TextChoices):
@@ -117,6 +127,10 @@ class Filmwork(TimeStampedMixin, models.Model):
     persons = models.ManyToManyField(Person, through='FilmworkPerson')
 
     class Meta:
+        indexes = (
+            models.Index(fields=('title',), name='film_work_title_idx'),
+            models.Index(fields=('creation_date',), name='film_work_creation_date_idx'),
+        )
         verbose_name = _('filmwork')
         verbose_name_plural = _('filmworks')
         db_table = '"content"."film_work"'
