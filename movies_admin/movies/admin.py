@@ -6,11 +6,13 @@ from .models import Filmwork, FilmworkGenre, Genre, FilmworkPerson, Person
 
 class GenreInline(admin.TabularInline):
     model = FilmworkGenre
+    autocomplete_fields = ('genre',)
     extra = 0
 
 
 class PersonInline(admin.TabularInline):
     model = FilmworkPerson
+    autocomplete_fields = ('person',)
     extra = 0
     ordering = ('-role', 'person__full_name')
 
