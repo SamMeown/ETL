@@ -1,5 +1,4 @@
 import uuid
-import functools
 
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -8,24 +7,21 @@ from django.utils.translation import gettext_lazy as _
 
 # Добавлям классы для текстового и файлового полей, которые пустые значения сохраняют в базу данных как NULL.
 # Делаем так потому, что в базе, которую мы унаследовали, используется такое соглашение (не пустые строки, а NULL).
-def return_none_if_empty(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        value = func(*args, **kwargs)
-        if not value:
+class FieldWithNullIfEmptyMixin:
+    def get_db_prep_value(self, value, connection, prepared=False):
+        # noinspection PyUnresolvedReferences
+        value = super().get_db_prep_value(value, connection, prepared)
+        if value == "":
             return None
         return value
-    return wrapper
 
 
-class TextNullField(models.TextField):
+class TextNullField(FieldWithNullIfEmptyMixin, models.TextField):
     """TextField that stores NULL when empty"""
-    get_db_prep_value = return_none_if_empty(models.TextField.get_db_prep_value)
 
 
-class FileNullField(models.FileField):
+class FileNullField(FieldWithNullIfEmptyMixin, models.FileField):
     """FileField that stores NULL when empty"""
-    get_db_prep_value = return_none_if_empty(models.FileField.get_db_prep_value)
 
 
 class TimeStampedMixin(models.Model):
@@ -92,6 +88,9 @@ class FilmworkPerson(models.Model):
         )
         db_table = '"content"."person_film_work"'
 
+    def __str__(self):
+        return f'{self.film_work} - {self.person} ({self.role})'
+
 
 class FilmworkGenre(models.Model):
     """Модель для связи жанров и кинопроизведений"""
@@ -105,6 +104,9 @@ class FilmworkGenre(models.Model):
             models.UniqueConstraint(fields=('film_work', 'genre'), name='genre_film_work_idx'),
         )
         db_table = '"content"."genre_film_work"'
+
+    def __str__(self):
+        return f'{self.film_work} - {self.genre}'
 
 
 class FilmworkType(models.TextChoices):
