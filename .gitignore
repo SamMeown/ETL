@@ -28,6 +28,7 @@ Temporary Items
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
 
 # C extensions
 *.so
@@ -40,6 +41,7 @@ develop-eggs/
 dist/
 downloads/
 eggs/
+.eggs/
 lib/
 lib64/
 parts/
@@ -60,12 +62,23 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
+.pytest_cache/
 htmlcov/
 .tox/
 .coverage
+.coverage.*
 .cache
 nosetests.xml
 coverage.xml
+*,cover
+.hypothesis/
+
+# virtualenv
+venv/
+ENV/
+
+# auto generated docs
+doc.html
 
 # Translations
 *.mo
@@ -79,6 +92,7 @@ target/
 
 # PyCharm
 .idea
+*.iml
 
 ### Django ###
 *.log
