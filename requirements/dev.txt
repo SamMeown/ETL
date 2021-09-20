@@ -1,4 +1,5 @@
 -r base.txt
 
-# dev зависимости
+# dev пакеты
 django-debug-toolbar==2.2
+django-extensions==3.1.3
