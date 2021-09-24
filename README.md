@@ -31,5 +31,5 @@
     $ cp .env.prod.sample .env.prod 
     $ cp .env.db.prod.sample .env.db.prod 
     {опционально: настроить переменные окружения в файлах} 
-    $ docker-compose up --build 
+    $ docker-compose up -d --build 
 
