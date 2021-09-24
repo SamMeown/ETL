@@ -1,4 +1,4 @@
 from .base import *
 
 
-# TODO: Будет позже.
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles/')

@@ -5,6 +5,8 @@ from .base import *
 
 DEBUG = True
 
+ALLOWED_HOSTS = []
+
 # Для удобной консоли (shell_plus) и пр.
 INSTALLED_APPS += ['django_extensions']
 
