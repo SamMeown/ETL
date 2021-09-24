@@ -16,15 +16,19 @@ class MoviesApiMixin:
             .values('film_work') \
             .annotate(genres=ArrayAgg('genre__name')) \
             .values_list('genres')
-        query_set = Filmwork.objects.values('id', 'title', 'description', 'creation_date', 'rating', 'type') \
-            .annotate(actors=ArrayAgg('persons__full_name', filter=Q(filmworkperson__role=PersonType.ACTOR)),
-                      directors=ArrayAgg('persons__full_name', filter=Q(filmworkperson__role=PersonType.DIRECTOR)),
-                      writers=ArrayAgg('persons__full_name', filter=Q(filmworkperson__role=PersonType.WRITER))) \
-            .annotate(genres=Subquery(genres_sub))
+        query_set = (Filmwork.objects.values('id', 'title', 'description', 'creation_date', 'rating', 'type')
+                     .annotate(actors=self._aggregate_person(PersonType.ACTOR),
+                               directors=self._aggregate_person(PersonType.DIRECTOR),
+                               writers=self._aggregate_person(PersonType.WRITER))
+                     .annotate(genres=Subquery(genres_sub)))
         return query_set
 
     def render_to_response(self, context, **response_kwargs):
         return JsonResponse(context)
+
+    @staticmethod
+    def _aggregate_person(role: PersonType):
+        return ArrayAgg('persons__full_name', filter=Q(filmworkperson__role=role))
 
 
 class MoviesListApi(MoviesApiMixin, BaseListView):
@@ -45,4 +49,4 @@ class MoviesListApi(MoviesApiMixin, BaseListView):
 
 class MoviesDetailApi(MoviesApiMixin, BaseDetailView):
     def get_context_data(self, **kwargs):
-        return self.get_object()
+        return super().get_context_data(**kwargs)['object']
