@@ -12,6 +12,7 @@ services:
       - ./.env.prod
     depends_on:
       - db
+
   db:
     image: postgres:13
     expose:
@@ -20,6 +21,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     env_file:
       - ./.env.db.prod
+
   etl:
     build: ./postgres_to_es
     command: python3 etl.py
@@ -28,6 +30,7 @@ services:
     depends_on:
       - db
       - elasticsearch
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
     expose:
@@ -38,6 +41,7 @@ services:
       - discovery.type=single-node
     depends_on:
       - db
+      
   nginx:
     image: nginx:1.19.2
     volumes:

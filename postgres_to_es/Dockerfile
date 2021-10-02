@@ -11,7 +11,7 @@ RUN apk update \
 
 COPY ./requirements/base.txt ./requirements.txt
 RUN pip install --upgrade pip \
-    && pip install -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt
 
 ENV PYTHONPATH $APP_HOME/..
 
