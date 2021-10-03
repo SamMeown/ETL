@@ -16,12 +16,14 @@ class PostgresSettings(BaseModel):
     dsn: DSNSettings
     min_backoff_delay: float = 0.1
     max_backoff_delay: float = 5
+    total_backoff_time: float = 30
 
 
 class ElasticsearchSettings(BaseModel):
     dsn: BaseDSNSettings
     min_backoff_delay: float = 0.1
     max_backoff_delay: float = 10
+    total_backoff_time: float = 30
 
 
 class Config(BaseModel):

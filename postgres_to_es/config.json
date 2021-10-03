@@ -8,7 +8,8 @@
       "port": 5432
     },
     "min_backoff_delay": 0.1,
-    "max_backoff_delay": 5
+    "max_backoff_delay": 5,
+    "total_backoff_time": 30
   },
   "es_db": {
     "dsn": {
@@ -17,7 +18,8 @@
       "port": 9200
     },
     "min_backoff_delay": 0.1,
-    "max_backoff_delay": 10
+    "max_backoff_delay": 10,
+    "total_backoff_time": 60
   },
   "state_file_path": "storage.json",
   "sync_interval": 30,

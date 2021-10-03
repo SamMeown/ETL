@@ -25,7 +25,8 @@ class Loader:
             logging.warning('Failed to load batch to Elasticsearch:', es_connection_error)
             return self.load(filmworks)
 
-    @backoff(start_sleep_time=config.es_db.min_backoff_delay, border_sleep_time=config.es_db.max_backoff_delay)
+    @backoff(start_sleep_time=config.es_db.min_backoff_delay, border_sleep_time=config.es_db.max_backoff_delay,
+             total_sleep_time=config.es_db.total_backoff_time)
     def load_impl(self, filmworks: Iterable[FilmWork]) -> (bool, datetime):
         if not filmworks:
             logging.warning('Loading to Elasticsearch: empty list')

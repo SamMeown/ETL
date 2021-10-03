@@ -290,7 +290,8 @@ class Extractor:
             self.connect()
 
     @backoff(start_sleep_time=config.postgres_db.min_backoff_delay,
-             border_sleep_time=config.postgres_db.max_backoff_delay)
+             border_sleep_time=config.postgres_db.max_backoff_delay,
+             total_sleep_time=config.postgres_db.total_backoff_time)
     def connect_impl(self):
         self.connection = psycopg2.connect(**self.dsn, cursor_factory=DictCursor)
 
