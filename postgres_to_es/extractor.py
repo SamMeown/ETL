@@ -281,17 +281,11 @@ class Extractor:
         if self.connection:
             self.connection.close()
 
-    def connect(self):
-        try:
-            self.connect_impl()
-        except psycopg2.OperationalError as db_exception:
-            logging.info('Failed to connect to postgres:', db_exception)
-            self.connect()
-
-    @backoff(start_sleep_time=config.postgres_db.min_backoff_delay,
+    @backoff(exceptions=(psycopg2.OperationalError,),
+             start_sleep_time=config.postgres_db.min_backoff_delay,
              border_sleep_time=config.postgres_db.max_backoff_delay,
              total_sleep_time=config.postgres_db.total_backoff_time)
-    def connect_impl(self):
+    def connect(self):
         self.connection = psycopg2.connect(**self.dsn, cursor_factory=DictCursor)
 
     def extract_batch(self, extract_since=None) -> BatchExtractResult:
@@ -301,7 +295,7 @@ class Extractor:
                                            genres_state=datetime.min.replace(tzinfo=pytz.UTC))
         try:
             return self.extract_batch_impl(extract_since)
-        except psycopg2.OperationalError as db_exception:
+        except (psycopg2.OperationalError, psycopg2.InterfaceError) as db_exception:
             logging.warning(f'Failed to execute extract_batch from postgres: {db_exception}')
             self.connect()
             return self.extract_batch(extract_since)

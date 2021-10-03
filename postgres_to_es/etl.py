@@ -5,7 +5,6 @@ from postgres_to_es.state_storage import JsonFileStorage, State
 from postgres_to_es.config import config
 from postgres_to_es.extractor import Extractor, ExtractorState
 from postgres_to_es.loader import Loader
-from postgres_to_es.backoff import BackoffTimeoutException
 
 
 def sync_es_with_postgres():
@@ -15,11 +14,8 @@ def sync_es_with_postgres():
         logging.info('ETL: Syncing es with postgres')
         try:
             perform_etl(etl_state)
-        except BackoffTimeoutException as timeout_ex:
-            logging.warning(f'ETL: Backoff timeout exceeded, stopping attempts till next ETL loop iteration')
         except Exception as err:
-            logging.error(f'ETL: Failed with error: {err}')
-            raise
+            logging.error(f'ETL: Failed loop iteration with error: {err}')
         time.sleep(config.sync_interval)
 
 

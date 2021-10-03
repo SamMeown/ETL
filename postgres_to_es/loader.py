@@ -19,16 +19,10 @@ class Loader:
     def __init__(self, dsn):
         self.dsn = dict(dsn)
 
-    def load(self, filmworks: Iterable[FilmWork]) -> (bool, datetime):
-        try:
-            return self.load_impl(filmworks)
-        except requests.exceptions.ConnectionError as es_connection_error:
-            logging.warning('Failed to load batch to Elasticsearch:', es_connection_error)
-            return self.load(filmworks)
-
-    @backoff(start_sleep_time=config.es_db.min_backoff_delay, border_sleep_time=config.es_db.max_backoff_delay,
+    @backoff(exceptions=(requests.exceptions.ConnectionError,),
+             start_sleep_time=config.es_db.min_backoff_delay, border_sleep_time=config.es_db.max_backoff_delay,
              total_sleep_time=config.es_db.total_backoff_time)
-    def load_impl(self, filmworks: Iterable[FilmWork]) -> (bool, datetime):
+    def load(self, filmworks: Iterable[FilmWork]) -> (bool, datetime):
         if not filmworks:
             logging.warning('Loading to Elasticsearch: empty list')
             return True, None
