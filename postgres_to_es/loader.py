@@ -4,6 +4,7 @@ import uuid
 from os import environ
 import json
 import logging
+from http import HTTPStatus
 
 import requests
 
@@ -34,11 +35,11 @@ class Loader:
 
         bulk_request_string = self.transform_films_to_raw_request_data(filmworks)
         headers = {'Content-Type': 'application/x-ndjson'}
-        response = requests.post(f"http://{self.dsn['host']}:{self.dsn['port']}/_bulk?filter_path=errors",
+        response = requests.post("http://{}:{}/_bulk?filter_path=errors".format(self.dsn['host'], self.dsn['port']),
                                  data=bulk_request_string,
                                  headers=headers)
 
-        if response.status_code != 200 or response.json().get('errors', True) is True:
+        if response.status_code != HTTPStatus.OK or response.json().get('errors', True) is True:
             logging.error(f'Loading to Elasticsearch: loaded with errors ({response.status_code})')
             return False, None
 
