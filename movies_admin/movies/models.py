@@ -71,28 +71,6 @@ class PersonType(models.TextChoices):
     WRITER = 'writer', _('writer')
 
 
-class ETLUpdates(models.Model):
-    """Модель для отслеживания апдейтов кинопроизведений, персон, жаноров и их связей.
-    Для того, чтобы можно было отследить удаление кинопроизведений, нужно как вариант
-    удалять их из основной таблицы, не удаляя, а например проставляя флажок удаленности,
-    по которому ETL позже бы определял, что запись надо удалить и из его бд. Но в этом
-    случае прилось бы апдейтить логику работы с таблицей кинопроизведений, чего делать бы
-    не хотелось. В том числе поэтому было принято решение завести для отслеживания апдейтов
-    отдельную таблицу.
-    """
-    film_work_id = models.UUIDField(_('ID'), primary_key=True, editable=False)
-    updated_at = models.DateTimeField()
-
-    class Meta:
-        indexes = (
-            models.Index(fields=('updated_at',), name='etl_updates_updated_at_idx'),
-        )
-        db_table = '"content"."etl_updates"'
-
-    def __str__(self):
-        return f'{self.film_work_id} - {self.updated_at}'
-
-
 class FilmworkPerson(models.Model):
     """Модель для связи персон и кинопроизведений"""
     id = models.UUIDField(_('ID'), primary_key=True, default=uuid.uuid4, editable=False)

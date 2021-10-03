@@ -8,6 +8,7 @@ import uuid
 class NamedItem:
     id: uuid.UUID
     name: str
+    updated_at: datetime
 
 
 @dataclass(frozen=True)
