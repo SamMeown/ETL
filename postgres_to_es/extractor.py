@@ -4,6 +4,7 @@ from os import environ
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 import pytz
+import logging
 
 import psycopg2
 from psycopg2.extras import register_uuid, DictCursor
@@ -285,7 +286,7 @@ class Extractor:
         try:
             self.connect_impl()
         except psycopg2.OperationalError as db_exception:
-            print('Failed to connect to postgres:', db_exception)
+            logging.info('Failed to connect to postgres:', db_exception)
             self.connect()
 
     @backoff(start_sleep_time=config.postgres_db.min_backoff_delay,
@@ -301,7 +302,7 @@ class Extractor:
         try:
             return self.extract_batch_impl(extract_since)
         except psycopg2.OperationalError as db_exception:
-            print('Failed to execute extract_batch from postgres:', db_exception)
+            logging.warning(f'Failed to execute extract_batch from postgres: {db_exception}')
             self.connect()
             return self.extract_batch(extract_since)
 
@@ -327,7 +328,7 @@ if __name__ == '__main__':
 
     extractor = Extractor(dsn, 5)
     result = extractor.extract_batch()
-    print(*result.filmworks, sep='\n')
+    logging.info(*result.filmworks)
     print(len(result.filmworks))
 
     result = extractor.extract_batch()

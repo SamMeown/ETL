@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import uuid
 from os import environ
 import json
+import logging
 
 import requests
 
@@ -21,13 +22,13 @@ class Loader:
         try:
             return self.load_impl(filmworks)
         except requests.exceptions.ConnectionError as es_connection_error:
-            print('Failed to load batch to Elasticsearch:', es_connection_error)
+            logging.warning('Failed to load batch to Elasticsearch:', es_connection_error)
             return self.load(filmworks)
 
     @backoff(start_sleep_time=config.es_db.min_backoff_delay, border_sleep_time=config.es_db.max_backoff_delay)
     def load_impl(self, filmworks: Iterable[FilmWork]) -> (bool, datetime):
         if not filmworks:
-            print('Loading to Elasticsearch: empty list')
+            logging.warning('Loading to Elasticsearch: empty list')
             return True, None
 
         bulk_request_string = self.transform_films_to_raw_request_data(filmworks)
@@ -37,10 +38,10 @@ class Loader:
                                  headers=headers)
 
         if response.status_code != 200 or response.json().get('errors', True) is True:
-            print(f'Loading to Elasticsearch: loaded with errors ({response.status_code})')
+            logging.error(f'Loading to Elasticsearch: loaded with errors ({response.status_code})')
             return False, None
 
-        print(f'Loading to Elasticsearch: success ({response.status_code})')
+        logging.info(f'Loading to Elasticsearch: success ({response.status_code})')
 
         return True, filmworks[-1].updated_at
 
