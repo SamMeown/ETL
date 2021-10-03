@@ -315,25 +315,3 @@ class Extractor:
             extract_res = self.extractor.extract_batch(self.connection, extract_since)
 
         return extract_res
-
-
-if __name__ == '__main__':
-    dsn = {
-        'dbname': environ.get('MIGRATION_DST_DB_NAME', 'movies'),
-        'user': environ.get('MIGRATION_DST_DB_USER', 'postgres'),
-        'password': environ.get('MIGRATION_DST_DB_PASSWORD', 'SomeBigSecret'),
-        'host': environ.get('MIGRATION_DST_DB_HOST', '127.0.0.1'),
-        'port': int(environ.get('MIGRATION_DST_DB_PORT', '5432'))
-    }
-
-    extractor = Extractor(dsn, 5)
-    result = extractor.extract_batch()
-    logging.info(*result.filmworks)
-    print(len(result.filmworks))
-
-    result = extractor.extract_batch()
-    print(*result.filmworks, sep='\n')
-    print(len(result.filmworks))
-
-    # print(named_items_array(result[0].actors))
-    # print(named_items_names(result[0].actors))
