@@ -59,8 +59,7 @@ class BaseExtractor(ABC):
                     return BatchExtractResult()
 
                 cursor.execute(sql_request.sql_template, sql_request.data)
-                films = cursor.fetchall()
-                film_ids = [f"{film[0]}" for film in films]
+                film_ids = [f"{film[0]}" for film in cursor]
 
                 if not film_ids:
                     return BatchExtractResult()
@@ -81,13 +80,13 @@ class BaseExtractor(ABC):
                                fw.rating, 
                                fw.type,
                                fw.updated_at,  
-                               pfw.role, 
-                               p.id, 
-                               p.full_name,
-                               p.updated_at,
-                               g.id,
-                               g.name,
-                               g.updated_at
+                               pfw.role as p_role, 
+                               p.id as p_id, 
+                               p.full_name as p_full_name,
+                               p.updated_at as p_updated_at,
+                               g.id as g_id,
+                               g.name as g_name,
+                               g.updated_at as g_updated_at
                            FROM content.film_work as fw 
                            LEFT JOIN content.person_film_work as pfw ON pfw.film_work_id = fw.id
                            LEFT JOIN content.person as p ON p.id = pfw.person_id
@@ -96,7 +95,7 @@ class BaseExtractor(ABC):
                            WHERE fw.id IN %s
                            ORDER BY fw.updated_at, fw.id;
 
-                   """
+                           """
         cursor.execute(sql_request, (tuple(film_ids),))
 
         return cursor.fetchall()
@@ -106,18 +105,18 @@ class BaseExtractor(ABC):
         films_data = []
         film_data = None
         for data in raw_data:
-            if not films_data or data[0] != films_data[-1].id:
-                film_data = FilmWork(id=data[0], title=data[1], description=data[2], rating=data[3],
-                                     type=data[4], updated_at=data[5])
+            if not films_data or data['id'] != films_data[-1].id:
+                film_data = FilmWork(id=data['id'], title=data['title'], description=data['description'],
+                                     rating=data['rating'], type=data['type'], updated_at=data['updated_at'])
                 films_data.append(film_data)
-            if data[6]:
-                person = NamedItem(id=data[7], name=data[8], updated_at=data[9])
+            if data['p_role']:
+                person = NamedItem(id=data['p_id'], name=data['p_full_name'], updated_at=data['p_updated_at'])
                 persons = getattr(film_data, {'actor': 'actors',
                                               'writer': 'writers',
-                                              'director': 'directors'}.get(data[6]))
+                                              'director': 'directors'}.get(data['p_role']))
                 persons.add(person)
-            if data[10]:
-                genre = NamedItem(id=data[10], name=data[11], updated_at=data[12])
+            if data['g_id']:
+                genre = NamedItem(id=data['g_id'], name=data['g_name'], updated_at=data['g_updated_at'])
                 film_data.genres.add(genre)
 
         return films_data
