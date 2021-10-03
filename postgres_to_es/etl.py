@@ -15,7 +15,7 @@ def sync_es_with_postgres():
         try:
             perform_etl(etl_state)
         except Exception as err:
-            logging.error(f'ETL: Failed loop iteration with error: {err}')
+            logging.exception(f'ETL: Failed loop iteration with error')
         time.sleep(config.sync_interval)
 
 

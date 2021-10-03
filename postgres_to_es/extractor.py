@@ -59,7 +59,7 @@ class BaseExtractor(ABC):
                     return BatchExtractResult()
 
                 cursor.execute(sql_request.sql_template, sql_request.data)
-                film_ids = [f"{film[0]}" for film in cursor]
+                film_ids = [str(film[0]) for film in cursor]
 
                 if not film_ids:
                     return BatchExtractResult()
@@ -175,8 +175,8 @@ class FilmworksFromPersonsExtractor(BaseExtractor):
                             LIMIT %s;
                         """
             cursor.execute(sql_request, (extract_since.persons_state, self.batch_size))
-            persons = cursor.fetchall()
-            self.person_ids = [f"{person[0]}" for person in persons]
+            persons = cursor.fetchall()  # тут persons нам понадобится чуть позже, поэтому fetchall
+            self.person_ids = [str(person[0]) for person in persons]
 
             if len(self.person_ids) == 0:
                 return None
@@ -228,7 +228,7 @@ class FilmworksFromGenresExtractor(BaseExtractor):
                         """
             cursor.execute(sql_request, (extract_since.genres_state, self.batch_size))
             genres = cursor.fetchall()
-            self.genre_ids = [f"{genre[0]}" for genre in genres]
+            self.genre_ids = [str(genre[0]) for genre in genres]
 
             if len(self.genre_ids) == 0:
                 return None
