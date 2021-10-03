@@ -12,7 +12,11 @@ def sync_es_with_postgres():
     etl_state = State(storage)
     while True:
         logging.info('ETL: Syncing es with postgres')
-        perform_etl(etl_state)
+        try:
+            perform_etl(etl_state)
+        except Exception as err:
+            logging.error(f'ETL: Failed with error: {err}')
+            raise
         time.sleep(config.sync_interval)
 
 
