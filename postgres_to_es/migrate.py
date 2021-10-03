@@ -8,7 +8,9 @@ from postgres_to_es.es_db_schema import db_schema
 def create_index():
     try:
         headers = {'Content-Type': 'application/json'}
-        response = requests.put(f"http://{config.es_db.dsn.host}:{config.es_db.dsn.port}/{config.es_db.dsn.dbname}",
+        response = requests.put('http://{host}:{port}/{path}'.format(host=config.es_db.dsn.host,
+                                                                     port=config.es_db.dsn.port,
+                                                                     path=config.es_db.dsn.dbname),
                                 data=db_schema,
                                 headers=headers)
         logging.info(f'Finished with response: {response.status_code} ({response.text}))')
