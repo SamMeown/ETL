@@ -59,7 +59,7 @@ class BaseExtractor(ABC):
 
                 cursor.execute(sql_request.sql_template, sql_request.data)
                 films = cursor.fetchall()
-                film_ids = [f"'{film[0]}'" for film in films]
+                film_ids = [f"{film[0]}" for film in films]
 
                 if not film_ids:
                     return BatchExtractResult()
@@ -92,11 +92,11 @@ class BaseExtractor(ABC):
                            LEFT JOIN content.person as p ON p.id = pfw.person_id
                            LEFT JOIN content.genre_film_work as gfw ON gfw.film_work_id = fw.id
                            LEFT JOIN content.genre as g ON g.id = gfw.genre_id
-                           WHERE fw.id IN ({', '.join(film_ids)})
+                           WHERE fw.id IN %s
                            ORDER BY fw.updated_at, fw.id;
 
                    """
-        cursor.execute(sql_request)
+        cursor.execute(sql_request, (tuple(film_ids),))
 
         return cursor.fetchall()
 
