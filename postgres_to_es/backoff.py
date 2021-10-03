@@ -28,17 +28,19 @@ def backoff(exceptions: List, start_sleep_time=0.1, factor=2, border_sleep_time=
         def inner(*args, **kwargs):
             nonlocal sleep_time, total_sleep_left
             try:
-                result = func(*args, **kwargs)
-                total_sleep_left = total_sleep_time
-                sleep_time = min(start_sleep_time, total_sleep_left)
-                return result
+                return func(*args, **kwargs)
             except exceptions as err:
                 logging.info(f'Backoff: caught exception {err}')
                 if total_sleep_left == 0:
                     logging.info('Backoff: total sleep type is over, reraising..')
+                    # в этой реализации мы используем внешние nonlocal переменные, поэтому они сами себя не сбросят
+                    # при разворачивании стека, надо их сбросить
                     total_sleep_left = total_sleep_time
                     sleep_time = min(start_sleep_time, total_sleep_left)
                     raise
+                if not sleep_time:
+                    total_sleep_left = total_sleep_time
+                    sleep_time = min(start_sleep_time, total_sleep_left)
                 logging.info(f'Backoff: will try again after sleep {sleep_time} secs..')
                 time.sleep(sleep_time)
                 total_sleep_left -= sleep_time
